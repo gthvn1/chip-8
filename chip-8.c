@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	}
 
 	// Next step: SDL_SetRenderDrawColor !!!
-cleanup:
+
 	SDL_DestroyWindow(sdl.window);
 	SDL_DestroyRenderer(sdl.renderer);
 	return 0;
