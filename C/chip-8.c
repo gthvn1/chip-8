@@ -1,4 +1,5 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
 #include <assert.h>
@@ -31,9 +32,18 @@ typedef struct {
 } sdl_t;
 
 /* Set default values */
-void new_sdl(sdl_t *sdl)
+void init_sdl(sdl_t *sdl)
 {
 	sdl->scale = 10;
+	SDL_Init(SDL_INIT_VIDEO); // init SDL2
+
+}
+
+void cleanup_sdl(sdl_t *sdl)
+{
+	SDL_DestroyWindow(sdl->window);
+	SDL_DestroyRenderer(sdl->renderer);
+	SDL_Quit();
 }
 
 bool create_window(sdl_t *sdl, const char *title)
@@ -73,9 +83,8 @@ int main(int argc, char **argv)
 	const char *title = "Chip-8 emulator";
 	sdl_t sdl = {0};
 
-	new_sdl(&sdl);
+	init_sdl(&sdl); // Set default value and init SDL2
 
-	puts("Hello, World!");
 	if (!create_window(&sdl, title)) {
 		return CREATE_WINDOW_ERROR;
 	}
@@ -85,9 +94,13 @@ int main(int argc, char **argv)
 		return CREATE_RENDERER_ERROR;
 	}
 
-	// Next step: SDL_SetRenderDrawColor !!!
+	SDL_SetRenderDrawColor(sdl.renderer, 255, 0, 0, 255); // Red (will be black soon)
+	SDL_RenderClear(sdl.renderer); // clear screen with our color.
+	SDL_RenderPresent(sdl.renderer); // Show the modifications
 
-	SDL_DestroyWindow(sdl.window);
-	SDL_DestroyRenderer(sdl.renderer);
+	// Before closing wait 3 Seconds...
+	SDL_Delay(3000);
+
+	cleanup_sdl(&sdl);
 	return 0;
 }
