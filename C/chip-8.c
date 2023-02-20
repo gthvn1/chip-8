@@ -15,6 +15,16 @@ const uint32_t CHIP8_WINDOW_WIDTH = 64;
 const uint32_t CHIP8_WINDOW_LENGHT = 32;
 
 typedef struct {
+	uint8_t  ram[4096]; // 4 KB RAM
+	uint16_t pc; // Program Counter
+	uint16_t i;  // Index register (point at location in memory)
+	uint8_t  delay_timer;
+	uint8_t  sound_timer;
+	uint8_t  vn[16]; // General purpose registers
+	uint8_t  sp; // Stack Pointer
+} chip8_t;
+
+typedef struct {
 	uint8_t scale;
 	SDL_Window *window;
 	SDL_Renderer *renderer;
