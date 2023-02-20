@@ -1,4 +1,7 @@
-# chip-8
+# Chip-8
+
+Chip-8 emulator is the *Hello, World!* of the emulator. So it is a good
+introduction to this world...
 
 ## Description
 
