@@ -1,5 +1,7 @@
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_log.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
 
@@ -38,11 +40,17 @@ const uint8_t FONTS[] = {
 };
 
 typedef enum {
-	CREATE_WINDOW_ERROR = 1,
-	CREATE_RENDERER_ERROR,
-	ROM_FILENAME_IS_MISSING,
+	OK = 0,
+	INIT_SDL_ERROR,
 	INIT_CHIP8_ERROR,
-} chip8_error;
+	ROM_FILENAME_IS_MISSING,
+} error_t;
+
+typedef enum {
+	RUNNING = 0,
+	PAUSED,
+	QUIT,
+} chip8_state_t;
 
 typedef struct {
 	uint8_t  ram[4096]; // 4 KB RAM
@@ -53,6 +61,7 @@ typedef struct {
 	uint8_t  vn[16]; // General purpose registers
 	uint8_t  sp; // stack pointer
 	uint16_t stack[32]; // Let's use a stack outside RAM
+	chip8_state_t state;
 } chip8_t;
 
 typedef struct {
@@ -61,20 +70,7 @@ typedef struct {
 	SDL_Renderer *renderer;
 } sdl_t;
 
-/* Set default values */
-void init_sdl(sdl_t *sdl)
-{
-	sdl->scale = 10;
-	SDL_Init(SDL_INIT_VIDEO); // init SDL2
-}
-
-void cleanup_sdl(sdl_t *sdl)
-{
-	SDL_DestroyWindow(sdl->window);
-	SDL_DestroyRenderer(sdl->renderer);
-	SDL_Quit();
-}
-
+// SDL functions
 bool create_window(sdl_t *sdl, const char *title)
 {
 	sdl->window = SDL_CreateWindow(
@@ -108,6 +104,65 @@ bool create_renderer(sdl_t *sdl)
 	return true;
 }
 
+/* Set default values */
+bool init_sdl(sdl_t *sdl, const char *title)
+{
+	sdl->scale = 10;
+	SDL_Init(SDL_INIT_VIDEO); // init SDL2
+
+	if (!create_window(sdl, title)) {
+		return false;
+	}
+
+	if (!create_renderer(sdl)) {
+		SDL_DestroyWindow(sdl->window);
+		return false;
+	}
+
+	return true;
+}
+
+void cleanup_sdl(sdl_t *sdl)
+{
+	SDL_DestroyRenderer(sdl->renderer);
+	SDL_DestroyWindow(sdl->window);
+	SDL_Quit();
+}
+
+void handle_sdl_input(chip8_t *chip8)
+{
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event)) {
+		switch(event.type) {
+			case SDL_QUIT:
+				chip8->state = QUIT;
+				break;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.scancode == SDL_SCANCODE_P) {
+					if (chip8->state == PAUSED) {
+						SDL_Log("Game resumed");
+						chip8->state = RUNNING;
+					} else {
+						SDL_Log("Game paused");
+						chip8->state = PAUSED;
+					}
+				}
+				// Our keyboard is an Azerty, so Q is A
+				else if (event.key.keysym.scancode == SDL_SCANCODE_A) {
+					chip8->state = QUIT;
+				}
+
+				break;
+		}
+	}
+}
+
+void update_sdl_window()
+{
+}
+
+// CHIP8 functions
 bool init_chip8(chip8_t *chip8, char *filename)
 {
 	FILE *f = fopen(filename, "r");
@@ -144,6 +199,10 @@ bool init_chip8(chip8_t *chip8, char *filename)
 	return true;
 }
 
+void emulate_chip8()
+{
+}
+
 void help(char *progname)
 {
 	printf("USAGE: %s <rom>\n", progname);
@@ -155,18 +214,10 @@ int main(int argc, char **argv)
 	chip8_t chip8 = {0};
 	sdl_t sdl = {0};
 
-	init_sdl(&sdl); // Set default value and init SDL2
+	if (!init_sdl(&sdl, title))
+		return INIT_SDL_ERROR;
 
-	if (!create_window(&sdl, title)) {
-		return CREATE_WINDOW_ERROR;
-	}
-
-	if (!create_renderer(&sdl)) {
-		SDL_DestroyWindow(sdl.window);
-		return CREATE_RENDERER_ERROR;
-	}
-
-	SDL_SetRenderDrawColor(sdl.renderer, 255, 0, 0, 255); // Red (will be black soon)
+	SDL_SetRenderDrawColor(sdl.renderer, 0, 0, 0, 255); // black
 	SDL_RenderClear(sdl.renderer); // clear screen with our color.
 	SDL_RenderPresent(sdl.renderer); // Show the modifications
 
@@ -181,9 +232,23 @@ int main(int argc, char **argv)
 		return INIT_CHIP8_ERROR;
 	}
 
-	// Before closing wait 3 Seconds...
-	// The event loop will soon replace this delay
-	SDL_Delay(3000);
+	// Main loop
+	while (chip8.state != QUIT) {
+		// TODO:
+		//   - Handle SDL input
+		//   - Emulate CHIP8 insns
+		//   - Add delay to simulate 60Hz
+		//     => 1/60 = 0.01667s ~ 16.67ms of delay
+		//   - Update SDL window
+		handle_sdl_input(&chip8);
+
+		if (chip8.state == PAUSED)
+			continue;
+
+		emulate_chip8();
+		SDL_Delay(17);
+		update_sdl_window();
+	}
 
 	cleanup_sdl(&sdl);
 	return 0;
