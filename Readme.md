@@ -50,7 +50,7 @@ introduction to this world...
 
 ## Implementation
 
-- **C/**: CHIP-8 emulator in C
+- **[C/](https://github.com/gthvn1/chip-8/tree/master/C)**: CHIP-8 emulator in C
 
 ## Links
 
