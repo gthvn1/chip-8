@@ -2,13 +2,40 @@
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_render.h>
 #include <SDL2/SDL_video.h>
+
+#include <errno.h>
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <sys/types.h>
 
 const uint32_t CHIP8_WINDOW_WIDTH = 64;
 const uint32_t CHIP8_WINDOW_LENGHT = 32;
+
+const uint16_t FONTS_OFFSET = 0x50; // offset in RAM where fonts are loaded
+const uint16_t ENTRY_POINT = 0x200;
+
+// Copied from https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#font
+const uint8_t FONTS[] = {
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
 typedef enum {
 	CREATE_WINDOW_ERROR = 1,
@@ -21,10 +48,11 @@ typedef struct {
 	uint8_t  ram[4096]; // 4 KB RAM
 	uint16_t pc; // Program Counter
 	uint16_t i;  // Index register (point at location in memory)
-	uint8_t  delay_timer;
+	uint8_t  delay_timer; // decremented by one 60 times per second (60Hz)
 	uint8_t  sound_timer;
 	uint8_t  vn[16]; // General purpose registers
-	uint8_t  sp; // Stack Pointer
+	uint8_t  sp; // stack pointer
+	uint16_t stack[32]; // Let's use a stack outside RAM
 } chip8_t;
 
 typedef struct {
@@ -82,12 +110,37 @@ bool create_renderer(sdl_t *sdl)
 
 bool init_chip8(chip8_t *chip8, char *filename)
 {
-	// TODO:
-	// - Open the file for reading
-	// - Load the content of the file in RAM at 0x200
-	// - Set the PC to 0x200
-	// - Set the SP ???
-	// - Set the 2 delay timers ???
+	FILE *f = fopen(filename, "r");
+	if (f == NULL) {
+		printf("Failed to open %s: %s\n", filename, strerror(errno));
+		return false;
+	}
+
+	fseek(f, 0, SEEK_END); // Go at the end of the file
+	long fsize = ftell(f); // Get the size of the file
+	rewind(f); // Return to the beginning
+	if (ftell(f) != 0) {
+		printf("Failed to rewind %s: %s\n", filename, strerror(errno));
+		fclose(f);
+		return false;
+	}
+
+	size_t iread = fread(&chip8->ram[ENTRY_POINT], 1, fsize, f);
+	if (iread != fsize) {
+		printf("Failed to load %s into RAM: %s\n", filename, strerror(errno));
+		printf("Read %ld bytes instead of %ld\n", iread, fsize);
+		fclose(f);
+		return false;
+	}
+
+	fclose(f);
+
+	chip8->pc = ENTRY_POINT;
+
+	// For some reason it is popular to put fonts at 0x50 in RAM.
+	// So let's do the same.
+	memcpy(&chip8->ram[FONTS_OFFSET], FONTS, sizeof(FONTS));
+
 	return true;
 }
 

@@ -1,6 +1,6 @@
 .PHONY: clean
 
-CFLAGS=-Wall -Werror
+CFLAGS=-Wall -Werror -g -O3
 
 chip-8: chip-8.c
 	gcc -o $@ $< `sdl2-config --cflags --libs` $(CFLAGS)
