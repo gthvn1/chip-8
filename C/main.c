@@ -25,8 +25,6 @@ int main(int argc, char **argv)
 	if (sdl == NULL)
 		return INIT_SDL_ERROR;
 
-	//clean_screen(&sdl);
-
 	// check if there is at least one argument and init chip8
 	if (argc < 2) {
 		cleanup_sdl(sdl);
