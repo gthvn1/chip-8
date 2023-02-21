@@ -1,12 +1,12 @@
 # Steps
 
 Steps are not yet well defined but we will:
-- [ ] Display 64x32 using SDL
-  - As it is a little bit small we will apply a scale value ;-)
+- [ ] Manage the [display](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/#display)
+  - [ ] using SDL
+  - [ ] implementing draw command
 - [x] Fetch insn
 - [x] Decode insn
 - [ ] Execute insn
-- [ ] Update SDL
 
 # Build
 
